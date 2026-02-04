@@ -34,10 +34,11 @@ tx_flange_tip = tx_flange_flangerot45 @ tx_flangerot45_flangerot90 @tx_flangerot
 tx_tip_flange = np.linalg.inv(tx_flange_tip)
 
 class FrankaInterface:
-    def __init__(self, ip='172.16.0.3', port=4242):
+    def __init__(self, ip='192.168.0.5', port=4242):
         self.server = zerorpc.Client(heartbeat=20)
         self.server.connect(f"tcp://{ip}:{port}")
 
+    # --- Robot wrappers ---
     def get_ee_pose(self):
         flange_pose = np.array(self.server.get_ee_pose())
         tip_pose = mat_to_pose(pose_to_mat(flange_pose) @ tx_flange_tip)
@@ -52,6 +53,45 @@ class FrankaInterface:
     def move_to_joint_positions(self, positions: np.ndarray, time_to_go: float):
         self.server.move_to_joint_positions(positions.tolist(), time_to_go)
 
+    # --- Gripper wrappers ---
+    def get_gripper_state(self):
+        state = self.server.get_gripper_state()
+        if state is None:
+            return None
+        return {
+            'width': float(state.get('width')) if state.get('width') is not None else None,
+            'is_grasped': bool(state.get('is_grasped')) if state.get('is_grasped') is not None else None,
+            'force': float(state.get('force')) if state.get('force') is not None else None,
+        }
+
+    def goto_gripper(self, width: float, speed: float, force: float, blocking: bool = True):
+        self.server.goto_gripper(float(width), float(speed), float(force), bool(blocking))
+
+    def grasp_gripper(self,
+        speed: float,
+        force: float,
+        grasp_width: float = 0.0,
+        epsilon_inner: float = -1.0,
+        epsilon_outer: float = -1.0,
+        blocking: bool = True,
+    ):
+        self.server.grasp_gripper(
+            float(speed),
+            float(force),
+            float(grasp_width),
+            float(epsilon_inner),
+            float(epsilon_outer),
+            bool(blocking),
+        )
+
+    def open_gripper(self, width: float = 0.08, speed: float = 0.1, force: float = 10.0, blocking: bool = True):
+        self.goto_gripper(width=width, speed=speed, force=force, blocking=blocking)
+
+    def close_gripper(self, speed: float = 0.1, force: float = 10.0, grasp_width: float = 0.0, blocking: bool = True):
+        self.grasp_gripper(speed=speed, force=force, grasp_width=grasp_width, blocking=blocking)
+
+
+    # --- Franka Cartesian Impedance Controller wrappers ---
     def start_cartesian_impedance(self, Kx: np.ndarray, Kxd: np.ndarray):
         self.server.start_cartesian_impedance(
             Kx.tolist(),
@@ -220,6 +260,20 @@ class FrankaInterpolationController(mp.Process):
             'target_time': target_time
         }
         self.input_queue.put(message)
+
+    def terminate_current_policy(self):
+        """
+        Parent-process helper to terminate the current cartesian impedance
+        policy running on the robot middle-layer. This creates a short-lived
+        `FrankaInterface` client and calls its `terminate_current_policy` RPC.
+        """
+        try:
+            client = FrankaInterface(self.robot_ip, self.robot_port)
+            client.terminate_current_policy()
+            client.close()
+        except Exception as e:
+            if self.verbose:
+                print(f"[FrankaPositionalController] terminate_current_policy failed: {e}")
     
     # ========= receive APIs =============
     def get_state(self, k=None, out=None):
