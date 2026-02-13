@@ -2,7 +2,7 @@
 import sys
 import os
 
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 print(ROOT_DIR)
 sys.path.append(ROOT_DIR)
 os.chdir(ROOT_DIR)
@@ -14,7 +14,8 @@ import numpy as np
 from multiprocessing.managers import SharedMemoryManager
 import scipy.spatial.transform as st
 from umi.common.precise_sleep import precise_wait
-from umi.real_world.franka_interpolation_controller import FrankaInterpolationController, FrankaInterface
+from umi.real_world.franka_interpolation_controller import FrankaInterpolationController
+from umi.real_world.franka_hand_controller import FrankaHandController
 from umi.real_world.keystroke_counter import (
     KeystrokeCounter, Key, KeyCode
 )
@@ -25,7 +26,7 @@ from umi.real_world.keystroke_counter import (
 @click.command()
 @click.option('-rh', '--robot_hostname', default='192.168.0.5')
 @click.option('-gh', '--gripper_hostname', default='192.168.0.5')
-@click.option('-gp', '--gripper_port', type=int, default=1000)
+@click.option('-gp', '--gripper_port', type=int, default=4242)
 @click.option('-f', '--frequency', type=float, default=30)
 @click.option('-gs', '--gripper_speed', type=float, default=200.0)
 def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_speed):
@@ -47,13 +48,18 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
              FrankaInterpolationController(
             shm_manager=shm_manager,
             robot_ip=robot_hostname,
-            frequency=100,
+            frequency=200,
             Kx_scale=5.0,
             Kxd_scale=2.0,
             verbose=False
-        ) as controller:
-            # create a franka client to control the franka hand (gripper)
-            franka = FrankaInterface(ip=robot_hostname)
+        ) as controller, \
+             FrankaHandController(
+            shm_manager=shm_manager,
+            hostname=gripper_hostname,
+            port=gripper_port,
+            frequency=frequency,
+            verbose=False
+        ) as gripper:
             try:
                 print('Ready!')
                 # to account for recever interfance latency, use target pose
@@ -69,8 +75,15 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
 
                 # gripper width in meters (franka hand): [0.0, 0.08]
                 max_gripper_width = 0.08
-                gripper_target_width = 0.08
+                # init gripper target width from controller ring buffer if available
+                try:
+                    gstate = gripper.get_state()
+                    gripper_target_width = float(gstate['gripper_width']) if gstate and 'gripper_width' in gstate else max_gripper_width
+                except Exception:
+                    gripper_target_width = max_gripper_width
+                # sync controller start time for gripper
                 t_start = time.monotonic()
+                gripper.restart_put(t_start-time.monotonic() + time.time())
 
                 iter_idx = 0
                 stop = False
@@ -116,16 +129,16 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
                         # gripper control: '+' increase width, '-' decrease, 'c' close, 'p' open
                         elif key_stroke == KeyCode(char='+') or key_stroke == KeyCode(char='='):
                             gripper_target_width = np.clip(gripper_target_width + 0.002, 0.0, max_gripper_width)
-                            franka.goto_gripper(width=gripper_target_width, speed=0.05, force=20.0, blocking=False)
+                            gripper.schedule_waypoint(gripper_target_width, t_command_target-time.monotonic()+time.time())
                         elif key_stroke == KeyCode(char='-'):
                             gripper_target_width = np.clip(gripper_target_width - 0.002, 0.0, max_gripper_width)
-                            franka.goto_gripper(width=gripper_target_width, speed=0.05, force=20.0, blocking=False)
+                            gripper.schedule_waypoint(gripper_target_width, t_command_target-time.monotonic()+time.time())
                         elif key_stroke == KeyCode(char='c'):
                             gripper_target_width = 0.0
-                            franka.goto_gripper(width=gripper_target_width, speed=0.05, force=20.0, blocking=False)
+                            gripper.schedule_waypoint(gripper_target_width, t_command_target-time.monotonic()+time.time())
                         elif key_stroke == KeyCode(char='p'):
                             gripper_target_width = max_gripper_width
-                            franka.goto_gripper(width=gripper_target_width, speed=0.05, force=20.0, blocking=False)
+                            gripper.schedule_waypoint(gripper_target_width, t_command_target-time.monotonic()+time.time())
 
                     precise_wait(t_sample)
 
@@ -137,10 +150,7 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
                     iter_idx += 1
                     # print(1/(time.time() -s))
             finally:
-                try:
-                    franka.close()
-                except Exception:
-                    pass
+                pass
 
     controller.terminate_current_policy()
 # %%
