@@ -2,7 +2,7 @@
 import sys
 import os
 
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 print(ROOT_DIR)
 sys.path.append(ROOT_DIR)
 os.chdir(ROOT_DIR)
@@ -14,7 +14,7 @@ import numpy as np
 from multiprocessing.managers import SharedMemoryManager
 import scipy.spatial.transform as st
 from umi.real_world.spacemouse_shared_memory import Spacemouse
-from umi.real_world.wsg_controller import WSGController
+from umi.real_world.franka_hand_controller import FrankaHandController
 from umi.common.precise_sleep import precise_wait
 from umi.real_world.keystroke_counter import (
     KeystrokeCounter, Key, KeyCode
@@ -27,12 +27,13 @@ from umi.real_world.franka_interpolation_controller import FrankaInterpolationCo
 @click.option('-rh', '--robot_hostname', default='192.168.0.5')
 @click.option('-gh', '--gripper_hostname', default='192.168.0.5')
 @click.option('-gp', '--gripper_port', type=int, default=4242)
-@click.option('-f', '--frequency', type=float, default=30)
+@click.option('-f', '--frequency', type=float, default=30) #(不能超过60)这个频率决定分发指令序列的时间间隔和命令延迟，设置过高可能会导致命令积压和系统不稳定。
 @click.option('-gs', '--gripper_speed', type=float, default=200.0)
 def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_speed):
     max_pos_speed = 0.25
     max_rot_speed = 0.6
-    max_gripper_width = 90.
+    # frankahand width in meters (was 90 mm for WSG)
+    max_gripper_width = 0.09
     cube_diag = np.linalg.norm([1,1,1])
     tcp_offset = 0.13
     # tcp_offset = 0
@@ -40,19 +41,20 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
     command_latency = dt / 2
 
     with SharedMemoryManager() as shm_manager:
-        with WSGController(
+        with FrankaHandController(
             shm_manager=shm_manager,
             hostname=gripper_hostname,
             port=gripper_port,
-            frequency=frequency,
-            move_max_speed=400.0,
+            frequency=1000,
+            # CLI gripper_speed is in mm/s, convert to m/s for FrankaHand
+            move_max_speed=gripper_speed * 0.001,
             verbose=False
-        ) as gripper,\
+        ) as gripper, \
         KeystrokeCounter() as key_counter, \
         FrankaInterpolationController(
             shm_manager=shm_manager,
             robot_ip=robot_hostname,
-            frequency=100,
+            frequency=1000,
             Kx_scale=5.0,
             Kxd_scale=2.0,
             verbose=False
@@ -75,7 +77,9 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
             # time.sleep(8)
             # exit()
         
-            gripper_target_pos = gripper.get_state()['gripper_position']
+            # FrankaHandController reports 'gripper_width' in meters
+            gs = gripper.get_state()
+            gripper_target_pos = gs.get('gripper_width', 0.0) if isinstance(gs, dict) else 0.0
             t_start = time.monotonic()
             gripper.restart_put(t_start-time.monotonic() + time.time())
             
@@ -109,11 +113,13 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
                 ).as_rotvec()
 
                 dpos = 0
+                # convert CLI gripper_speed (mm/s) to meters per cycle
+                gripper_step = (gripper_speed * 0.001) / frequency
                 if sm.is_button_pressed(0):
                     # close gripper
-                    dpos = -gripper_speed / frequency
+                    dpos = -gripper_step
                 if sm.is_button_pressed(1):
-                    dpos = gripper_speed / frequency
+                    dpos = gripper_step
                 gripper_target_pos = np.clip(gripper_target_pos + dpos, 0, max_gripper_width)
 
                 controller.schedule_waypoint(target_pose, 

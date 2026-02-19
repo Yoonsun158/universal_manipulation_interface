@@ -8,7 +8,44 @@ from umi.shared_memory.shared_memory_queue import (
 from umi.shared_memory.shared_memory_ring_buffer import SharedMemoryRingBuffer
 from umi.common.pose_trajectory_interpolator import PoseTrajectoryInterpolator
 from umi.common.precise_sleep import precise_wait
-from umi.real_world.franka_interpolation_controller import FrankaInterface
+import zerorpc
+
+
+class FrankaHandInterface:
+    def __init__(self, ip='192.168.0.5', port=4242):
+        self.server = zerorpc.Client(heartbeat=20)
+        self.server.connect(f"tcp://{ip}:{port}")
+
+    def get_gripper_state(self):
+        state = self.server.get_gripper_state()
+        return state
+
+    def goto_gripper(self, width: float, speed: float, force: float, blocking: bool = False):
+        self.server.goto_gripper(float(width), float(speed), float(force), bool(blocking))
+
+    def grasp_gripper(self,
+        speed: float,
+        force: float,
+        grasp_width: float = 0.0,
+        epsilon_inner: float = -1.0,
+        epsilon_outer: float = -1.0,
+        blocking: bool = False,
+    ):
+        self.server.grasp_gripper(
+            float(speed), float(force), float(grasp_width), float(epsilon_inner), float(epsilon_outer), bool(blocking)
+        )
+
+    def open_gripper(self, width: float = 0.08, speed: float = 0.1, force: float = 10.0, blocking: bool = False):
+        self.goto_gripper(width=width, speed=speed, force=force, blocking=blocking)
+
+    def close_gripper(self, speed: float = 0.1, force: float = 10.0, grasp_width: float = 0.0, blocking: bool = False):
+        self.grasp_gripper(speed=speed, force=force, grasp_width=grasp_width, blocking=blocking)
+
+    def close(self):
+        try:
+            self.server.close()
+        except Exception:
+            pass
 
 
 class Command(enum.Enum):
@@ -23,7 +60,7 @@ class FrankaHandController(mp.Process):
         shm_manager: SharedMemoryManager,
         hostname,
         port=4242,
-        frequency=100,
+        frequency=1000,
         move_max_speed=0.08,
         get_max_k=None,
         command_queue_size=1024,
@@ -138,7 +175,7 @@ class FrankaHandController(mp.Process):
 
     # main loop
     def run(self):
-        robot = FrankaInterface(self.hostname, self.port)
+        robot = FrankaHandInterface(self.hostname, self.port)
         try:
             # init
             curr_state = robot.get_gripper_state()

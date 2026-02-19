@@ -14,8 +14,7 @@ import numpy as np
 from collections import deque
 from tqdm import tqdm
 from multiprocessing.managers import SharedMemoryManager
-from umi.real_world.franka_hand_controller import FrankaHandController
-from umi.real_world.franka_interpolation_controller import FrankaInterface
+from umi.real_world.franka_hand_controller import FrankaHandController, FrankaHandInterface
 from umi.common.precise_sleep import precise_sleep
 from umi.common.latency_util_franka import get_latency
 from matplotlib import pyplot as plt
@@ -133,7 +132,7 @@ def main(hostname, frequency):
 
     # 初始化夹抓
     try:
-        robot = FrankaInterface(hostname)
+        robot = FrankaHandInterface(hostname)
         # 将夹抓打开到最大宽度（单位：米），阻塞直到完成
         robot.goto_gripper(width=max_width, speed=0.08, force=10.0, blocking=True)
         robot.close()

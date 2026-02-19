@@ -53,43 +53,6 @@ class FrankaInterface:
     def move_to_joint_positions(self, positions: np.ndarray, time_to_go: float):
         self.server.move_to_joint_positions(positions.tolist(), time_to_go)
 
-    # --- Gripper wrappers ---
-    def get_gripper_state(self):
-        state = self.server.get_gripper_state()
-        if state is None:
-            return None
-        return {
-            'width': float(state.get('width')) if state.get('width') is not None else None,
-            'is_grasped': bool(state.get('is_grasped')) if state.get('is_grasped') is not None else None,
-            'force': float(state.get('force')) if state.get('force') is not None else None,
-        }
-
-    def goto_gripper(self, width: float, speed: float, force: float, blocking: bool = True):
-        self.server.goto_gripper(float(width), float(speed), float(force), bool(blocking))
-
-    def grasp_gripper(self,
-        speed: float,
-        force: float,
-        grasp_width: float = 0.0,
-        epsilon_inner: float = -1.0,
-        epsilon_outer: float = -1.0,
-        blocking: bool = True,
-    ):
-        self.server.grasp_gripper(
-            float(speed),
-            float(force),
-            float(grasp_width),
-            float(epsilon_inner),
-            float(epsilon_outer),
-            bool(blocking),
-        )
-
-    def open_gripper(self, width: float = 0.08, speed: float = 0.1, force: float = 10.0, blocking: bool = True):
-        self.goto_gripper(width=width, speed=speed, force=force, blocking=blocking)
-
-    def close_gripper(self, speed: float = 0.1, force: float = 10.0, grasp_width: float = 0.0, blocking: bool = True):
-        self.grasp_gripper(speed=speed, force=force, grasp_width=grasp_width, blocking=blocking)
-
 
     # --- Franka Cartesian Impedance Controller wrappers ---
     def start_cartesian_impedance(self, Kx: np.ndarray, Kxd: np.ndarray):
@@ -424,9 +387,17 @@ class FrankaInterpolationController(mp.Process):
             # manditory cleanup
             # terminate
             print('\n\n\n\nterminate_current_policy\n\n\n\n\n')
-            robot.terminate_current_policy()
-            del robot
-            self.ready_event.set()
+            try:
+                robot.terminate_current_policy()
+            except Exception as e:
+                if self.verbose:
+                    print(f"[FrankaPositionalController] terminate_current_policy failed: {e}")
+            finally:
+                try:
+                    del robot
+                except Exception:
+                    pass
+                self.ready_event.set()
 
             if self.verbose:
                 print(f"[FrankaPositionalController] Disconnected from robot: {self.robot_ip}")
