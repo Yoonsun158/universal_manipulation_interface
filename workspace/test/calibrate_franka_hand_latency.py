@@ -16,7 +16,8 @@ from tqdm import tqdm
 from multiprocessing.managers import SharedMemoryManager
 from umi.real_world.franka_hand_controller import FrankaHandController, FrankaHandInterface
 from umi.common.precise_sleep import precise_sleep
-from umi.common.latency_util_franka import get_latency
+# from umi.common.latency_util_franka import get_latency
+from umi.common.latency_util import get_latency
 from matplotlib import pyplot as plt
 
 # %%
@@ -97,8 +98,8 @@ def main(hostname, frequency):
     latency, info = get_latency(
         x_target=width,
         t_target=timestamps,
-        x_actual=actual_widths,
-        t_actual=actual_timestamps,
+        x_actual=states['gripper_width'],
+        t_actual=states['gripper_receive_timestamp']
     )
     print(f"End-to-end latency: {latency}sec")
 

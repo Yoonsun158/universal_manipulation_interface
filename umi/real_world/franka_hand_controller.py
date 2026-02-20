@@ -9,6 +9,7 @@ from umi.shared_memory.shared_memory_ring_buffer import SharedMemoryRingBuffer
 from umi.common.pose_trajectory_interpolator import PoseTrajectoryInterpolator
 from umi.common.precise_sleep import precise_wait
 import zerorpc
+import threading
 
 
 class FrankaHandInterface:
@@ -172,10 +173,13 @@ class FrankaHandController(mp.Process):
 
     def get_all_state(self):
         return self.ring_buffer.get_all()
+    
 
     # main loop
     def run(self):
         robot = FrankaHandInterface(self.hostname, self.port)
+
+
         try:
             # init
             curr_state = robot.get_gripper_state()
@@ -196,6 +200,8 @@ class FrankaHandController(mp.Process):
 
                 # compute target from interpolator
                 target_pos = pose_interp(t_now)[0]
+
+
                 # send gripper command (non-blocking)
                 try:
                     robot.goto_gripper(width=float(target_pos), speed=0.1, force=10.0, blocking=False)
