@@ -6,7 +6,7 @@ import shutil
 import math
 from multiprocessing.managers import SharedMemoryManager
 from umi.real_world.rtde_interpolation_controller import RTDEInterpolationController
-from umi.real_world.franka_hand_controller import FrankaHandController
+from umi.real_world.wsg_controller import WSGController
 from umi.real_world.franka_interpolation_controller import FrankaInterpolationController
 from umi.real_world.multi_uvc_camera import MultiUvcCamera, VideoRecorder
 from diffusion_policy.common.timestamp_accumulator import (
@@ -207,7 +207,7 @@ class BimanualUmiEnv:
 
         assert len(robots_config) == len(grippers_config)
         robots: List[RTDEInterpolationController] = list()
-        grippers: List[FrankaHandController] = list()
+        grippers: List[WSGController] = list()
         for rc in robots_config:
             if rc['robot_type'].startswith('ur5'):
                 assert rc['robot_type'] in ['ur5', 'ur5e']
@@ -245,11 +245,12 @@ class BimanualUmiEnv:
             robots.append(this_robot)
 
         for gc in grippers_config:
-            this_gripper = FrankaHandController(
+            this_gripper = WSGController(
                 shm_manager=shm_manager,
                 hostname=gc['gripper_ip'],
                 port=gc['gripper_port'],
-                receive_latency=gc['gripper_obs_latency']
+                receive_latency=gc['gripper_obs_latency'],
+                use_meters=True
             )
 
             grippers.append(this_gripper)

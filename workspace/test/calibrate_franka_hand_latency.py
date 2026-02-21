@@ -36,7 +36,7 @@ def main(hostname, frequency):
     value = np.sin(2 * np.pi * sample_t / P) * 0.5 + 0.5
     # 将归一化的 value 映射到 [min_width, max_width]
     # min_width = 0.006  # 6 mm
-    max_width = 0.077   # 77 mm (约为 Franka hand 最大开度)
+    max_width = 0.08   # 70 mm (约为 Franka hand 最大开度)
     # width = min_width + value * (max_width - min_width)
     width = value * max_width
 
@@ -82,12 +82,12 @@ def main(hostname, frequency):
             # 从控制器的 ring buffer 获取所有 gripper 状态
             states = controller.get_all_state()
             command_queue_size=int(frequency * (duration)),
-    print(f"{len(states['gripper_width'])}, {len(states['gripper_receive_timestamp'])}")
+    print(f"{len(states['gripper_position'])}, {len(states['gripper_receive_timestamp'])}")
 
     # # 从 states 中提取 gripper_width 和 gripper_receive_timestamp
     # actual_widths = np.array(states['gripper_width'])
     # actual_timestamps = np.array(states['gripper_receive_timestamp'])
-    actual_widths = states['gripper_width']
+    actual_widths = states['gripper_position']
     actual_timestamps = states['gripper_receive_timestamp']
     # # 去除nan
     # valid = ~np.isnan(actual_widths)
@@ -98,8 +98,8 @@ def main(hostname, frequency):
     latency, info = get_latency(
         x_target=width,
         t_target=timestamps,
-        x_actual=states['gripper_width'],
-        t_actual=states['gripper_receive_timestamp']
+        x_actual=actual_widths,
+        t_actual=actual_timestamps
     )
     print(f"End-to-end latency: {latency}sec")
 

@@ -33,7 +33,7 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
     max_pos_speed = 0.25
     max_rot_speed = 0.6
     # frankahand width in meters (was 90 mm for WSG)
-    max_gripper_width = 0.09
+    max_gripper_width = 0.08
     cube_diag = np.linalg.norm([1,1,1])
     tcp_offset = 0.13
     # tcp_offset = 0

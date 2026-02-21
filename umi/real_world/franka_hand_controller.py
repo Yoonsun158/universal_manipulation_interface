@@ -96,7 +96,7 @@ class FrankaHandController(mp.Process):
         # build ring buffer
         example_rb = {
             'gripper_state': 0,
-            'gripper_width': 0.0,
+            'gripper_position': 0.0,
             'gripper_force': 0.0,
             'gripper_measure_timestamp': time.time(),
             'gripper_receive_timestamp': time.time(),
@@ -212,7 +212,7 @@ class FrankaHandController(mp.Process):
                 gs = robot.get_gripper_state()
                 state = {
                     'gripper_state': gs.get('is_grasped') if gs else 0,
-                    'gripper_width': gs.get('width') if gs else 0.0,
+                    'gripper_position': gs.get('width') if gs else 0.0,
                     'gripper_force': gs.get('force') if gs else 0.0,
                     'gripper_measure_timestamp': time.time(),
                     'gripper_receive_timestamp': time.time(),

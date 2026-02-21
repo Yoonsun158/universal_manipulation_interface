@@ -1,10 +1,20 @@
-import pathlib
+# %%
+import sys
 import os
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(ROOT_DIR)
+os.chdir(ROOT_DIR)
+
+# %%
+import pathlib
 import pickle
 import collections
 import numpy as np
 import time
+import zerorpc
 
+# %%
 # # 测试文件的挂载位置
 # input_dir = "example_demo_session/demos/mapping"
 # video_dir = pathlib.Path(os.path.expanduser(input_dir)).absolute()
