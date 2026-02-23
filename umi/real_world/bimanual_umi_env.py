@@ -51,8 +51,8 @@ class BimanualUmiEnv:
             robot_obs_horizon=2,
             gripper_obs_horizon=2,
             # action
-            max_pos_speed=0.25,
-            max_rot_speed=0.6,
+            max_pos_speed=0.01,
+            max_rot_speed=0.03,
             init_joints=False,
             # vis params
             enable_multi_cam_vis=True,
@@ -234,9 +234,9 @@ class BimanualUmiEnv:
                 this_robot = FrankaInterpolationController(
                     shm_manager=shm_manager,
                     robot_ip=rc['robot_ip'],
-                    frequency=200,
-                    Kx_scale=1.0,
-                    Kxd_scale=np.array([2.0,1.5,2.0,1.0,1.0,1.0]),
+                    frequency=100,
+                    Kx_scale=0.2,
+                    Kxd_scale=np.array([3.0,2.5,3.0,2.0,2.0,2.0]),
                     verbose=False,
                     receive_latency=rc['robot_obs_latency']
                 )
