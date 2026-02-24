@@ -35,12 +35,21 @@ class Command(enum.Enum):
 # tx_flange_tip = tx_flange_flangerot45 @ tx_flangerot45_flangerot90 @tx_flangerot90_tip
 # tx_tip_flange = np.linalg.inv(tx_flange_tip)
 
-# %% Franka Hand 计算机器人末端法兰（Flange）与工具末端（Tip）之间的齐次变换矩阵, 绕法兰坐标系Z轴顺时针旋转45度, 并沿法兰坐标系Z轴正向平移0.204m
+# %% Franka Hand 计算机器人末端法兰（Flange）与工具末端（Tip）之间的齐次变换矩阵, 绕法兰坐标系Z轴旋转45度, 并沿法兰坐标系Z轴正向平移
 
-tx_flange_tip = np.identity(4)
-tx_flange_tip[:3, :3] = st.Rotation.from_euler('z', [-np.pi/4]).as_matrix()
-tx_flange_tip[:3, 3] = np.array([0, 0, 0.204])
+# tx_flange_tip = np.identity(4)
+# tx_flange_tip[:3, :3] = st.Rotation.from_euler('z', [np.pi/4]).as_matrix()
+# tx_flange_tip[:3, 3] = np.array([0, 0, 0.25])
+
+tx_flange_flangerot45 = np.identity(4)
+tx_flange_flangerot45[:3,:3] = st.Rotation.from_euler('z', [np.pi/4]).as_matrix()
+
+tx_flangerot45_tip = np.identity(4)
+tx_flangerot45_tip[:3, 3] = np.array([0, 0, 0.25])
+
+tx_flange_tip = tx_flange_flangerot45 @ tx_flangerot45_tip
 tx_tip_flange = np.linalg.inv(tx_flange_tip)
+
 
 class FrankaInterface:
     def __init__(self, ip='192.168.0.5', port=4242):

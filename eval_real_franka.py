@@ -1,6 +1,6 @@
 """
 Usage:
-(umi): python scripts_real/eval_real_umi.py -i data/outputs/2023.10.26/02.25.30_train_diffusion_unet_timm_umi/checkpoints/latest.ckpt -o data_local/cup_test_data
+(umi): python eval_real_franka.py --robot_config=example/eval_robots_config.yaml -i cup_wild_vit_l.ckpt -o data/eval_cup_wild_example
 
 ================ Human in control ==============
 Robot movement:
@@ -193,8 +193,8 @@ def main(input, output, robot_config,
                 fisheye_converter=fisheye_converter,
                 mirror_swap=mirror_swap,
                 # action
-                max_pos_speed=2.0,
-                max_rot_speed=6.0,
+                max_pos_speed=0.01,
+                max_rot_speed=0.03,
                 shm_manager=shm_manager) as env:
             cv2.setNumThreads(2)
             print("Waiting for camera")
@@ -274,7 +274,7 @@ def main(input, output, robot_config,
                 # ========= human control loop ==========
                 print("Human in control!")
                 robot_states = env.get_robot_state()
-                target_pose = np.stack([rs['TargetTCPPose'] for rs in robot_states])
+                target_pose = np.stack([rs['ActualTCPPose'] for rs in robot_states])
 
                 gripper_states = env.get_gripper_state()
                 gripper_target_pos = np.asarray([gs['gripper_position'] for gs in gripper_states])
@@ -388,8 +388,8 @@ def main(input, output, robot_config,
                     # get teleop command
                     sm_state = sm.get_motion_state_transformed()
                     # print(sm_state)
-                    dpos = sm_state[:3] * (0.5 / frequency)
-                    drot_xyz = sm_state[3:] * (1.5 / frequency)
+                    dpos = sm_state[:3] * (0.05 / frequency)
+                    drot_xyz = sm_state[3:] * (0.2/ frequency)
 
                     drot = st.Rotation.from_euler('xyz', drot_xyz)
                     for robot_idx in control_robot_idx_list:

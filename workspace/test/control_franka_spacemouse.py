@@ -30,8 +30,8 @@ from umi.real_world.franka_interpolation_controller import FrankaInterpolationCo
 @click.option('-f', '--frequency', type=float, default=30) #(不能超过60)这个频率决定分发指令序列的时间间隔和命令延迟，设置过高可能会导致命令积压和系统不稳定。
 @click.option('-gs', '--gripper_speed', type=float, default=200.0)
 def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_speed):
-    max_pos_speed = 0.25
-    max_rot_speed = 0.6
+    max_pos_speed = 0.03
+    max_rot_speed = 0.06
     # frankahand width in meters (was 90 mm for WSG)
     max_gripper_width = 0.08
     cube_diag = np.linalg.norm([1,1,1])

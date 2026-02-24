@@ -174,3 +174,7 @@ cython_debug/
 
 *.mp4
 *.zip
+
+
+*.ckpt
+example_demo_session
