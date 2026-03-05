@@ -44,6 +44,7 @@ register_codecs()
 @click.option('-n', '--num_workers', type=int, default=None)
 def main(input, output, out_res, out_fov, compression_level, 
          no_mirror, mirror_swap, num_workers):
+    print("Input paths:", input)
     if os.path.isfile(output):
         if click.confirm(f'Output file {output} exists! Overwrite?', abort=True):
             pass
@@ -85,6 +86,19 @@ def main(input, output, out_res, out_fov, compression_level,
             print(f"Skipping {ipath.name}: no dataset_plan.pkl")
             continue
         
+        # pickle 文件中的数据存储形式
+        """
+        [{'episode_timestamps': array([...]),
+          'grippers': [{'tcp_pose': array([...]),
+                        'gripper_width': array([...]),
+                        'demo_start_pose': array([...]),
+                        'demo_end_pose': array([...])},
+                       ...],
+          'cameras': [{'video_path': 'camera0.mp4',
+                       'video_start_end': (2, 754)},
+                      ...]},
+         {...},]
+        """
         plan = pickle.load(plan_path.open('rb'))
         
         videos_dict = defaultdict(list)
@@ -269,6 +283,17 @@ def main(input, output, out_res, out_fov, compression_level,
         )
     print(f"Done! {len(all_videos)} videos used in total!")
 
-# %%
+# 
 if __name__ == "__main__":
+    # 设置默认参数, 方便在IDE中调试
+    # 注意，这里不能有空格。错误写法：-o my_demo_session/dataset.zarr.zip
+    sys.argv.extend([
+        "-omy_demo_session/dataset.zarr.zip",
+        "my_demo_session"
+    ])
     main()
+
+
+# wget --recursive --no-parent --no-host-directories --cut-dirs=2 --relative --reject="index.html*" https://real.stanford.edu/umi/data/example_demo_session/
+# python run_slam_pipeline.py my_demo_session
+# python scripts_slam_pipeline/07_generate_replay_buffer.py -o example_demo_session/dataset.zarr.zip example_demo_session

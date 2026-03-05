@@ -46,10 +46,11 @@ def main(docker_image, num_workers, no_docker_pull, session_dir):
         print(f'Found {len(input_video_dirs)} video dirs')
 
         with tqdm(total=len(input_video_dirs)) as pbar:
-            # one chunk per thread, therefore no synchronization needed
+            # one chunk per thread, therefore no synchronization(同步) needed
             with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
                 futures = set()
                 for video_dir in tqdm(input_video_dirs):
+                    # video_dir 是 demo_Cxxxxx_2025 这种结构
                     video_dir = video_dir.absolute()
                     if video_dir.joinpath('imu_data.json').is_file():
                         print(f"imu_data.json already exists, skipping {video_dir.name}")
@@ -64,7 +65,7 @@ def main(docker_image, num_workers, no_docker_pull, session_dir):
                         'docker',
                         'run',
                         '--rm', # delete after finish
-                        '--volume', str(video_dir) + ':' + '/data',
+                        '--volume', str(video_dir) + ':' + '/data', # 将本地视频目录挂载到容器的/data目录
                         docker_image,
                         'node',
                         '/OpenImuCameraCalibrator/javascript/extract_metadata_single.js',
@@ -82,6 +83,7 @@ def main(docker_image, num_workers, no_docker_pull, session_dir):
                         pbar.update(len(completed))
 
                     futures.add(executor.submit(
+                        # 为什么不将 video_dir 作为lambda的参数传递？
                         lambda x, stdo, stde: subprocess.run(x, 
                             cwd=str(video_dir),
                             stdout=stdo.open('w'),

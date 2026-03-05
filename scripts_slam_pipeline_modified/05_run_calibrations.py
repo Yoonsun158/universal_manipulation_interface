@@ -50,6 +50,7 @@ def main(session_dir):
         script_path = script_dir.joinpath('calibrate_gripper_range.py')
         assert script_path.is_file()
         
+        # 个人理解，可能对于使用两个gripper操作的需要分别标定
         for gripper_dir in demos_dir.glob("gripper_calibration*"):
             gripper_range_path = gripper_dir.joinpath('gripper_range.json')
             tag_path = gripper_dir.joinpath('tag_detection.pkl')

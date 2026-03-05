@@ -25,8 +25,9 @@ def main(session_dir):
         # hardcode subdirs
         input_dir = session.joinpath('raw_videos')
         output_dir = session.joinpath('demos')
-        
-        # create raw_videos if don't exist
+
+        # create raw_videos if don't exist 
+        # input_dir = 'session_dir/raw_videos'
         if not input_dir.is_dir():
             input_dir.mkdir()
             print(f"{input_dir.name} subdir don't exits! Creating one and moving all mp4 videos inside.")
@@ -39,6 +40,7 @@ def main(session_dir):
         if (not mapping_vid_path.exists()) and not(mapping_vid_path.is_symlink()):
             max_size = -1
             max_path = None
+            # 通过比较文件的大小，来判断哪一个是mapping视频
             for mp4_path in list(input_dir.glob('**/*.MP4')) + list(input_dir.glob('**/*.mp4')):
                 size = mp4_path.stat().st_size
                 if size > max_size:
@@ -55,6 +57,8 @@ def main(session_dir):
             
             serial_start_dict = dict()
             serial_path_dict = dict()
+            # 将拍摄时间最早的视频认为是gripper calibration视频（除了mapping视频外最早的）
+            # 这里需要注意的是，可能会有多个相机的标定视频，因此需要按相机序列号分组
             with ExifToolHelper() as et:
                 for mp4_path in list(input_dir.glob('**/*.MP4')) + list(input_dir.glob('**/*.mp4')):
                     if mp4_path.name.startswith('map'):

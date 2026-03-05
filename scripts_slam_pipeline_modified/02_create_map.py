@@ -60,6 +60,8 @@ def main(input_dir, map_path, docker_image, no_docker_pull, no_mask):
     if not no_mask:
         mask_write_path = video_dir.joinpath('slam_mask.png')
         slam_mask = np.zeros((2028, 2704), dtype=np.uint8)
+        # slam mask的是哪些部分呢？需要绘制的部分被设为255（白色）
+        # answer: mask掉mirror和finger部分，即mask掉动态物体，用在slam中
         slam_mask = draw_predefined_mask(
             slam_mask, color=255, mirror=True, gripper=False, finger=True)
         cv2.imwrite(str(mask_write_path.absolute()), slam_mask)
@@ -91,6 +93,8 @@ def main(input_dir, map_path, docker_image, no_docker_pull, no_mask):
     stdout_path = video_dir.joinpath('slam_stdout.txt')
     stderr_path = video_dir.joinpath('slam_stderr.txt')
 
+    # 这里cwd的作用是让子进程使用video_dir作为当前工作目录
+    # 子进程中，所有相对路径都是相对于video_dir的，绝对路径不受影响
     result = subprocess.run(
         cmd,
         cwd=str(video_dir),

@@ -45,7 +45,7 @@ tx_flange_flangerot45 = np.identity(4)
 tx_flange_flangerot45[:3,:3] = st.Rotation.from_euler('z', [np.pi/4]).as_matrix()
 
 tx_flangerot45_tip = np.identity(4)
-tx_flangerot45_tip[:3, 3] = np.array([0, 0, 0.25])
+tx_flangerot45_tip[:3, 3] = np.array([0, 0, 0.23])
 
 tx_flange_tip = tx_flange_flangerot45 @ tx_flangerot45_tip
 tx_tip_flange = np.linalg.inv(tx_flange_tip)

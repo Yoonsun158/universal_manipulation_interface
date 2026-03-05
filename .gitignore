@@ -178,3 +178,4 @@ cython_debug/
 
 *.ckpt
 example_demo_session
+assembly_session

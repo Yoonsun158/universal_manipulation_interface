@@ -2,6 +2,8 @@
 Usage:
 (umi): python eval_real_franka.py --robot_config=example/eval_robots_config.yaml -i cup_wild_vit_l.ckpt -o data/eval_cup_wild_example
 
+python eval_real_franka.py --robot_config=example/eval_robots_config.yaml -i latest.ckpt -o data/assembly_20260227
+
 ================ Human in control ==============
 Robot movement:
 Move your SpaceMouse to move the robot EEF (locked in xy plane).
