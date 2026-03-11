@@ -158,7 +158,7 @@ def main(input, output, robot_config,
     obs_res = get_real_obs_resolution(cfg.task.shape_meta)
     # load fisheye converter
     fisheye_converter = None
-    if sim_fov is not None:
+    if sim_fov is not None: # default is none
         assert camera_intrinsics is not None
         opencv_intr_dict = parse_fisheye_intrinsics(
             json.load(open(camera_intrinsics, 'r')))
@@ -169,10 +169,11 @@ def main(input, output, robot_config,
         )
 
     print("steps_per_inference:", steps_per_inference)
+    # 跨进程共享内存的管理器
     with SharedMemoryManager() as shm_manager:
         with Spacemouse(shm_manager=shm_manager) as sm, \
             KeystrokeCounter() as key_counter, \
-            BimanualUmiEnv(
+            BimanualUmiEnv(	# 双臂/单臂统一支持
                 output_dir=output,
                 robots_config=robots_config,
                 grippers_config=grippers_config,
@@ -202,6 +203,7 @@ def main(input, output, robot_config,
             # load match_dataset
             episode_first_frame_map = dict()
             match_replay_buffer = None
+            # match_dataset的默认值为none
             if match_dataset is not None:
                 match_dir = pathlib.Path(match_dataset)
                 match_zarr_path = match_dir.joinpath('replay_buffer.zarr')
@@ -235,8 +237,8 @@ def main(input, output, robot_config,
             policy.num_inference_steps = 16 # DDIM inference iterations
             obs_pose_rep = cfg.task.pose_repr.obs_pose_repr
             action_pose_repr = cfg.task.pose_repr.action_pose_repr
-            print('obs_pose_rep', obs_pose_rep)
-            print('action_pose_repr', action_pose_repr)
+            print('obs_pose_rep', obs_pose_rep) # 相对 or 绝对 (对于obs，相对是相对于初始位置还是相对于上一时刻？)
+            print('action_pose_repr', action_pose_repr) # 相对 or 绝对
 
 
             device = torch.device('cuda')
@@ -257,7 +259,7 @@ def main(input, output, robot_config,
                     env_obs=obs, shape_meta=cfg.task.shape_meta, 
                     obs_pose_repr=obs_pose_rep,
                     tx_robot1_robot0=tx_robot1_robot0,
-                    episode_start_pose=episode_start_pose)
+                    episode_start_pose=episode_start_pose)  # episode_start_pose是什么意思？
                 obs_dict = dict_apply(obs_dict_np, 
                     lambda x: torch.from_numpy(x).unsqueeze(0).to(device))
                 result = policy.predict_action(obs_dict)
@@ -292,7 +294,7 @@ def main(input, output, robot_config,
 
                     # visualize
                     episode_id = env.replay_buffer.n_episodes
-                    vis_img = obs[f'camera{match_camera}_rgb'][-1]
+                    vis_img = obs[f'camera{match_camera}_rgb'][-1]  # 默认的match_camera是0
                     match_episode_id = episode_id
                     if match_episode is not None:
                         match_episode_id = match_episode
@@ -306,6 +308,7 @@ def main(input, output, robot_config,
                             bgr_to_rgb=False)
                         match_img = tf(match_img).astype(np.float32) / 255
                         vis_img = (vis_img + match_img) / 2
+                    # 为什么这里都使用camera0_rgb？
                     obs_left_img = obs['camera0_rgb'][-1]
                     obs_right_img = obs['camera0_rgb'][-1]
                     vis_img = np.concatenate([obs_left_img, obs_right_img, vis_img], axis=1)
@@ -459,6 +462,8 @@ def main(input, output, robot_config,
                     perv_target_pose = None
                     while True:
                         # calculate timing
+                        # steps_per_inference 默认为6
+                        # 从t_start开始执行策略，分配好以后每次policy执行的时间间隔
                         t_cycle_end = t_start + (iter_idx + steps_per_inference) * dt
 
                         # get obs
@@ -555,6 +560,7 @@ def main(input, output, robot_config,
                                 print('Stopped.')
                                 stop_episode = True
 
+                        # eval_t_start 是policy开始的时间，当达到最大时间时，policy停止
                         t_since_start = time.time() - eval_t_start
                         if t_since_start > max_duration:
                             print("Max Duration reached.")

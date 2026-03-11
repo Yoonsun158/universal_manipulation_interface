@@ -2,9 +2,16 @@
 Usage:
 Training:
 python train.py --config-name=train_diffusion_lowdim_workspace
-python train.py --config-name=train_diffusion_unet_timm_umi_workspace task.dataset_path=assembly_session/dataset.zarr.zip
-
 """
+
+# 首次运行train.py会从huggingface下载权重，需要设置代理，才能正常下载
+import os
+os.environ['https_proxy'] = 'http://127.0.0.1:7890'
+os.environ['http_proxy'] = 'http://127.0.0.1:7890'
+os.environ['all_proxy'] = 'socks5://127.0.0.1:7890'
+# 禁用wandb
+os.environ["WANDB_DISABLED"]="true"
+
 
 import sys
 # use line-buffering for both stdout and stderr
@@ -22,7 +29,7 @@ OmegaConf.register_new_resolver("eval", eval, replace=True)
 @hydra.main(
     version_base=None,
     config_path=str(pathlib.Path(__file__).parent.joinpath(
-        'diffusion_policy','config'))
+        'diffusion_policy','config')),
 )
 def main(cfg: OmegaConf):
     # resolve immediately so all the ${now:} resolvers
@@ -33,5 +40,13 @@ def main(cfg: OmegaConf):
     workspace: BaseWorkspace = cls(cfg)
     workspace.run()
 
+
 if __name__ == "__main__":
+    # 设置默认参数, 方便在IDE中调试
+    sys.argv.extend([
+        "--config-name=train_diffusion_unet_timm_umi_workspace",
+        "task.dataset_path=cup_in_the_wild.zarr.zip"
+    ])
     main()
+
+# python train.py --config-name=train_diffusion_unet_timm_umi_workspace task.dataset_path=cup_in_the_wild.zarr.zip

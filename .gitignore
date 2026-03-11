@@ -173,9 +173,11 @@ cython_debug/
 #.idea/
 
 *.mp4
+*.MP4
 *.zip
 
 
 *.ckpt
 example_demo_session
 assembly_session
+test_resource

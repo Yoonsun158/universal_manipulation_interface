@@ -1,3 +1,5 @@
+cp -r /home/yuchen/project/copy/example_demo_session /home/yuchen/project/'universal_manipulation_interface(client)'
+
 # Universal Manipulation Interface
 
 [[Project page]](https://umi-gripper.github.io/)
